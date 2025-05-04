@@ -1,0 +1,53 @@
+# Step 1: Generate sample Raja Luck data
+import pandas as pd
+import random
+from datetime import datetime, timedelta
+
+colors = ['red', 'green', 'purple']
+numbers = list(range(10))
+base_time = datetime.strptime("2025-05-04 11:00", "%Y-%m-%d %H:%M")
+data = []
+
+for i in range(100):
+    number = random.choice(numbers)
+    if number in [1, 3, 7, 9]:
+        color = 'green'
+    elif number in [2, 4, 6, 8]:
+        color = 'red'
+    else:  # 0 and 5
+        color = 'purple'
+    timestamp = base_time + timedelta(minutes=i)
+    data.append([timestamp, number, color])
+
+df = pd.DataFrame(data, columns=['timestamp', 'number', 'color'])
+df.to_csv('raja_luck_data.csv', index=False)
+print(df.head())# Step 2: Load data and build prediction model
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+
+df = pd.read_csv('raja_luck_data.csv')
+
+# Create features based on past outcome
+df['last_number'] = df['number'].shift(1)
+df['last_color'] = df['color'].shift(1)
+df.dropna(inplace=True)
+
+# Convert text labels to numeric codes
+df['color'] = df['color'].astype('category').cat.codes
+df['last_color'] = df['last_color'].astype('category').cat.codes
+
+X = df[['last_number', 'last_color']]
+y = df['color']
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a simple decision tree classifier
+model = DecisionTreeClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+# Predict and evaluate
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Model Accuracy: {accuracy * 100:.2f}%")
